@@ -1,0 +1,243 @@
+import React, { useState, useMemo } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Brush, ReferenceLine } from 'recharts';
+import { Upload, FileText, Activity, Maximize2, Minimize2 } from 'lucide-react';
+
+const RxNoiseChart = () => {
+  const [data, setData] = useState([
+    // 預載入片段數據作為範例
+    { time_stamp: '2025-12-03T16:24:12.084166', iss_dbm: -55.58 },
+    { time_stamp: '2025-12-03T16:24:13.083609', iss_dbm: -55.58 },
+    { time_stamp: '2025-12-03T16:24:14.084857', iss_dbm: -55.56 },
+    { time_stamp: '2025-12-03T16:24:15.085028', iss_dbm: -55.56 },
+    { time_stamp: '2025-12-03T16:24:16.086081', iss_dbm: -55.58 },
+    { time_stamp: '2025-12-03T16:24:17.086024', iss_dbm: -55.58 },
+    { time_stamp: '2025-12-03T16:24:18.085798', iss_dbm: -55.59 },
+    { time_stamp: '2025-12-03T16:24:19.194981', iss_dbm: 17.29 },
+    { time_stamp: '2025-12-03T16:24:20.193624', iss_dbm: 20.68 },
+    { time_stamp: '2025-12-03T16:24:21.195737', iss_dbm: 20.93 },
+    { time_stamp: '2025-12-03T16:24:22.195702', iss_dbm: 20.38 },
+    { time_stamp: '2025-12-03T16:32:30.409197', iss_dbm: 14.76 },
+    { time_stamp: '2025-12-03T16:32:31.411513', iss_dbm: 13.10 },
+    { time_stamp: '2025-12-03T16:32:32.411158', iss_dbm: 14.07 },
+    { time_stamp: '2025-12-03T16:32:33.410271', iss_dbm: 12.63 },
+    { time_stamp: '2025-12-03T16:32:34.412557', iss_dbm: 13.30 },
+    { time_stamp: '2025-12-03T16:32:35.411516', iss_dbm: 14.83 },
+    { time_stamp: '2025-12-03T16:32:36.413141', iss_dbm: 18.62 },
+    { time_stamp: '2025-12-03T16:32:37.412645', iss_dbm: 21.19 },
+    { time_stamp: '2025-12-03T16:32:38.412560', iss_dbm: 20.10 },
+    { time_stamp: '2025-12-03T16:32:39.414158', iss_dbm: 13.60 },
+    { time_stamp: '2025-12-03T16:32:40.413738', iss_dbm: -8.22 },
+  ]);
+  const [fileName, setFileName] = useState('預設範例數據 (片段)');
+  const [error, setError] = useState('');
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setFileName(file.name);
+    setError('');
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target.result;
+      parseCSV(text);
+    };
+    reader.onerror = () => {
+      setError('讀取檔案時發生錯誤');
+    };
+    reader.readAsText(file);
+  };
+
+  const parseCSV = (csvText) => {
+    try {
+      const lines = csvText.trim().split('\n');
+      const headers = lines[0].split(',').map(h => h.trim());
+      
+      const timeIndex = headers.indexOf('time_stamp');
+      const dbmIndex = headers.indexOf('iss_dbm');
+
+      if (timeIndex === -1 || dbmIndex === -1) {
+        setError('CSV 格式錯誤：找不到 time_stamp 或 iss_dbm 欄位');
+        return;
+      }
+
+      const parsedData = [];
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const values = line.split(',');
+        if (values.length < 2) continue;
+
+        const timestamp = values[timeIndex].trim();
+        const dbm = parseFloat(values[dbmIndex].trim());
+
+        if (!isNaN(dbm)) {
+          parsedData.push({
+            time_stamp: timestamp,
+            iss_dbm: dbm,
+            // 添加一個格式化後的時間用於顯示
+            displayTime: new Date(timestamp).toLocaleTimeString('zh-TW', { hour12: false })
+          });
+        }
+      }
+
+      if (parsedData.length === 0) {
+        setError('未找到有效數據');
+        return;
+      }
+
+      // 按時間排序
+      parsedData.sort((a, b) => new Date(a.time_stamp) - new Date(b.time_stamp));
+      setData(parsedData);
+    } catch (err) {
+      setError('解析 CSV 時發生錯誤：' + err.message);
+    }
+  };
+
+  // 計算統計數據
+  const stats = useMemo(() => {
+    if (data.length === 0) return { max: 0, min: 0, avg: 0 };
+    const values = data.map(d => d.iss_dbm);
+    const max = Math.max(...values);
+    const min = Math.min(...values);
+    const avg = values.reduce((a, b) => a + b, 0) / values.length;
+    return { max, min, avg };
+  }, [data]);
+
+  // 自定義 Tooltip
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border border-gray-200 shadow-lg rounded-lg">
+          <p className="text-sm text-gray-600 mb-1">{label}</p>
+          <p className="text-base font-bold text-blue-600">
+            {`噪訊值: ${payload[0].value.toFixed(2)} dBm`}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div className="flex flex-col h-screen bg-gray-50 p-4 font-sans text-slate-800">
+      <div className="max-w-7xl mx-auto w-full space-y-4">
+        
+        {/* Header Section */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2 text-slate-800">
+              <Activity className="text-blue-600" />
+              Rx Noise 時間軸分析
+            </h1>
+            <p className="text-slate-500 text-sm mt-1">
+              目前顯示檔案: <span className="font-mono font-medium text-slate-700">{fileName}</span>
+              <span className="ml-2 text-xs bg-slate-100 px-2 py-0.5 rounded-full text-slate-500">{data.length} 筆數據</span>
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+             <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm">
+                <Upload size={18} />
+                <span>上傳 CSV 檔案</span>
+                <input 
+                  type="file" 
+                  accept=".csv" 
+                  onChange={handleFileUpload} 
+                  className="hidden" 
+                />
+              </label>
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 text-red-600 p-3 rounded-lg border border-red-100 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <div className="text-slate-500 text-sm flex items-center gap-2 mb-1">
+              <Maximize2 size={16} className="text-red-500" /> 最大噪訊值 (Max)
+            </div>
+            <div className="text-2xl font-bold text-slate-800">{stats.max.toFixed(2)} <span className="text-sm font-normal text-slate-400">dBm</span></div>
+          </div>
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <div className="text-slate-500 text-sm flex items-center gap-2 mb-1">
+              <Minimize2 size={16} className="text-green-500" /> 最小噪訊值 (Min)
+            </div>
+            <div className="text-2xl font-bold text-slate-800">{stats.min.toFixed(2)} <span className="text-sm font-normal text-slate-400">dBm</span></div>
+          </div>
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <div className="text-slate-500 text-sm flex items-center gap-2 mb-1">
+              <Activity size={16} className="text-blue-500" /> 平均噪訊值 (Avg)
+            </div>
+            <div className="text-2xl font-bold text-slate-800">{stats.avg.toFixed(2)} <span className="text-sm font-normal text-slate-400">dBm</span></div>
+          </div>
+        </div>
+
+        {/* Chart Section */}
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex-1 min-h-[400px]">
+          <div className="h-[500px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={data}
+                margin={{ top: 20, right: 30, left: 10, bottom: 10 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis 
+                  dataKey="time_stamp" 
+                  tickFormatter={(str) => {
+                    const d = new Date(str);
+                    return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}`;
+                  }}
+                  minTickGap={30}
+                  tick={{ fontSize: 12, fill: '#64748b' }}
+                />
+                <YAxis 
+                  domain={['auto', 'auto']}
+                  label={{ value: '噪訊強度 (dBm)', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#64748b' } }}
+                  tick={{ fontSize: 12, fill: '#64748b' }}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                <ReferenceLine y={stats.avg} label="平均值" stroke="#94a3b8" strokeDasharray="3 3" />
+                <Line 
+                  type="monotone" 
+                  dataKey="iss_dbm" 
+                  name="ISS dBm" 
+                  stroke="#2563eb" 
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 6, fill: '#2563eb' }}
+                  animationDuration={500}
+                />
+                <Brush 
+                  dataKey="time_stamp" 
+                  height={30} 
+                  stroke="#cbd5e1"
+                  fill="#f8fafc"
+                  tickFormatter={(str) => {
+                    const d = new Date(str);
+                    return `${d.getHours()}:${d.getMinutes()}`;
+                  }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-2 text-center text-xs text-slate-400">
+            提示：您可以拖動底部的小滑桿來縮放或平移時間軸範圍
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+export default RxNoiseChart;
