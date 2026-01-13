@@ -208,10 +208,14 @@
             }
         }
 
-        // 格式化時間戳記
+        // 格式化時間戳記 (UTC+8)
         function getFormattedTimestamp() {
             const now = new Date();
-            let iso = now.toISOString(); 
+            // 轉換為 UTC+8 (加上 8 小時)
+            const offset = 8 * 60 * 60 * 1000; // 8小時的毫秒數
+            const utc8Time = new Date(now.getTime() + offset);
+            
+            let iso = utc8Time.toISOString(); 
             iso = iso.replace('Z', '');
             if (!iso.includes('.')) {
                 iso += '.000000';
