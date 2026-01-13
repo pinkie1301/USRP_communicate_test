@@ -32,19 +32,79 @@
                 <!-- GPS File -->
                 <div class="space-y-2">
                     <label class="block text-sm font-semibold text-gray-600">
-                        GPS Log (CSV) - 時區 UTC+0
+                        GPS Log (CSV)
                     </label>
                     <input type="file" id="gps-file" accept=".csv" 
                         class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="text-xs text-gray-500">時區校正：</span>
+                        <select id="gps-timezone" class="text-xs border border-gray-300 rounded px-2 py-1 bg-white">
+                            <option value="-12">UTC-12</option>
+                            <option value="-11">UTC-11</option>
+                            <option value="-10">UTC-10</option>
+                            <option value="-9">UTC-9</option>
+                            <option value="-8">UTC-8</option>
+                            <option value="-7">UTC-7</option>
+                            <option value="-6">UTC-6</option>
+                            <option value="-5">UTC-5</option>
+                            <option value="-4">UTC-4</option>
+                            <option value="-3">UTC-3</option>
+                            <option value="-2">UTC-2</option>
+                            <option value="-1">UTC-1</option>
+                            <option value="0" selected>UTC+0</option>
+                            <option value="1">UTC+1</option>
+                            <option value="2">UTC+2</option>
+                            <option value="3">UTC+3</option>
+                            <option value="4">UTC+4</option>
+                            <option value="5">UTC+5</option>
+                            <option value="6">UTC+6</option>
+                            <option value="7">UTC+7</option>
+                            <option value="8">UTC+8</option>
+                            <option value="9">UTC+9</option>
+                            <option value="10">UTC+10</option>
+                            <option value="11">UTC+11</option>
+                            <option value="12">UTC+12</option>
+                        </select>
+                    </div>
                     <p id="gps-status" class="text-xs text-gray-400">尚未選擇檔案</p>
                 </div>
                 <!-- Noise File -->
                 <div class="space-y-2">
                     <label class="block text-sm font-semibold text-gray-600">
-                        Noise Log (CSV) - 時區 UTC+8
+                        Noise Log (CSV)
                     </label>
                     <input type="file" id="noise-file" accept=".csv" 
                         class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer">
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="text-xs text-gray-500">時區校正：</span>
+                        <select id="noise-timezone" class="text-xs border border-gray-300 rounded px-2 py-1 bg-white">
+                            <option value="-12">UTC-12</option>
+                            <option value="-11">UTC-11</option>
+                            <option value="-10">UTC-10</option>
+                            <option value="-9">UTC-9</option>
+                            <option value="-8">UTC-8</option>
+                            <option value="-7">UTC-7</option>
+                            <option value="-6">UTC-6</option>
+                            <option value="-5">UTC-5</option>
+                            <option value="-4">UTC-4</option>
+                            <option value="-3">UTC-3</option>
+                            <option value="-2">UTC-2</option>
+                            <option value="-1">UTC-1</option>
+                            <option value="0">UTC+0</option>
+                            <option value="1">UTC+1</option>
+                            <option value="2">UTC+2</option>
+                            <option value="3">UTC+3</option>
+                            <option value="4">UTC+4</option>
+                            <option value="5">UTC+5</option>
+                            <option value="6">UTC+6</option>
+                            <option value="7">UTC+7</option>
+                            <option value="8" selected>UTC+8</option>
+                            <option value="9">UTC+9</option>
+                            <option value="10">UTC+10</option>
+                            <option value="11">UTC+11</option>
+                            <option value="12">UTC+12</option>
+                        </select>
+                    </div>
                     <p id="noise-status" class="text-xs text-gray-400">尚未選擇檔案</p>
                 </div>
             </div>
@@ -85,7 +145,7 @@
 
         <!-- Chart 1: Noise Chart -->
         <div id="chart1-section" class="hidden bg-white rounded-xl shadow p-6">
-            <h2 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2">📈 Noise 訊號圖 (折線圖)</h2>
+            <h2 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2">📈 Noise 訊號圖</h2>
             <div class="chart-container">
                 <canvas id="noise-chart"></canvas>
             </div>
@@ -93,7 +153,14 @@
 
         <!-- Chart 2: GPS Chart -->
         <div id="chart2-section" class="hidden bg-white rounded-xl shadow p-6">
-            <h2 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2">🗺️ GPS 軌跡圖 (二維點圖)</h2>
+            <h2 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2">🗺️ GPS 軌跡圖</h2>
+            <!-- 漸層圖例 -->
+            <div class="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
+                <span class="text-sm font-medium text-gray-600">時間軸</span>
+                <span class="text-xs text-gray-500">起點</span>
+                <div class="flex-grow h-4 rounded" style="background: linear-gradient(to right, #87CEEB, #9370DB, #800080);"></div>
+                <span class="text-xs text-gray-500">終點</span>
+            </div>
             <div class="chart-container">
                 <canvas id="gps-chart"></canvas>
             </div>
@@ -101,21 +168,13 @@
 
         <!-- Chart 3: Combined Chart -->
         <div id="chart3-section" class="hidden bg-white rounded-xl shadow p-6">
-            <h2 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2">🔗 Noise 與 GPS 疊圖</h2>
-            <!-- Toggle Controls -->
-            <div class="flex flex-wrap gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="toggle-gps" checked class="w-4 h-4 text-blue-600 rounded">
-                    <span class="text-sm font-medium text-blue-600">🔵 GPS 全部點</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="toggle-noise" checked class="w-4 h-4 text-orange-600 rounded">
-                    <span class="text-sm font-medium text-orange-600">🟠 Noise 全部點</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="toggle-matched" checked class="w-4 h-4 text-green-600 rounded">
-                    <span class="text-sm font-medium text-green-600">🟢 對齊成功點</span>
-                </label>
+            <h2 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2">🔗 GPS 與 Noise 對齊點</h2>
+            <!-- 漸層圖例 -->
+            <div class="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
+                <span class="text-sm font-medium text-gray-600">Noise db</span>
+                <span class="text-xs text-gray-500">弱</span>
+                <div class="flex-grow h-4 rounded" style="background: linear-gradient(to right, #FFE4E1, #FF6347, #DC143C);"></div>
+                <span class="text-xs text-gray-500">強</span>
             </div>
             <div class="chart-container">
                 <canvas id="combined-chart"></canvas>
@@ -148,6 +207,8 @@
 
     <script>
         // ========== 全域變數 ==========
+        let gpsRawData = null;   // 原始 CSV 資料
+        let noiseRawData = null; // 原始 CSV 資料
         let gpsData = [];
         let noiseData = [];
         let matchedData = [];
@@ -160,6 +221,8 @@
         const els = {
             gpsFile: document.getElementById('gps-file'),
             noiseFile: document.getElementById('noise-file'),
+            gpsTimezone: document.getElementById('gps-timezone'),
+            noiseTimezone: document.getElementById('noise-timezone'),
             gpsStatus: document.getElementById('gps-status'),
             noiseStatus: document.getElementById('noise-status'),
             btnProcess: document.getElementById('btn-process'),
@@ -169,9 +232,6 @@
             chart2Section: document.getElementById('chart2-section'),
             chart3Section: document.getElementById('chart3-section'),
             previewSection: document.getElementById('preview-section'),
-            toggleGps: document.getElementById('toggle-gps'),
-            toggleNoise: document.getElementById('toggle-noise'),
-            toggleMatched: document.getElementById('toggle-matched'),
         };
 
         // ========== 工具函式 ==========
@@ -195,8 +255,9 @@
             return data;
         }
 
-        // 將時間字串轉為 Date 物件 (已轉換為 UTC+8)
-        function parseTimeToUTC8(timeStr, isUTC0 = false) {
+        // 將時間字串轉為 Date 物件 (統一轉換為 UTC+8)
+        // sourceTimezone: 來源時區 (例如 0 表示 UTC+0, 8 表示 UTC+8)
+        function parseTimeToUTC8(timeStr, sourceTimezone = 8) {
             // 移除微秒部分 (只保留毫秒)
             let normalizedStr = timeStr;
             const dotIndex = timeStr.lastIndexOf('.');
@@ -209,9 +270,12 @@
             
             let date = new Date(normalizedStr);
             
-            // 如果是 UTC+0，加上 8 小時轉為 UTC+8
-            if (isUTC0) {
-                date = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+            // 計算需要調整的時差 (目標是 UTC+8)
+            const targetTimezone = 8;
+            const hourDiff = targetTimezone - sourceTimezone;
+            
+            if (hourDiff !== 0) {
+                date = new Date(date.getTime() + hourDiff * 60 * 60 * 1000);
             }
             
             return date;
@@ -232,9 +296,9 @@
         }
 
         // 解析 GPS 資料
-        function parseGpsData(rawData) {
+        function parseGpsData(rawData, timezone) {
             return rawData.map(row => {
-                const time = parseTimeToUTC8(row.time_stamp, true); // GPS 是 UTC+0，需轉換
+                const time = parseTimeToUTC8(row.time_stamp, timezone);
                 return {
                     time: time,
                     timeKey: getRoundedHalfSecondKey(time),
@@ -246,9 +310,9 @@
         }
 
         // 解析 Noise 資料
-        function parseNoiseData(rawData) {
+        function parseNoiseData(rawData, timezone) {
             return rawData.map(row => {
-                const time = parseTimeToUTC8(row.time_stamp, false); // Noise 已是 UTC+8
+                const time = parseTimeToUTC8(row.time_stamp, timezone);
                 return {
                     time: time,
                     timeKey: getRoundedHalfSecondKey(time),
@@ -294,7 +358,12 @@
             
             if (noiseChart) noiseChart.destroy();
             
-            const labels = noiseData.map(d => formatTime(d.time));
+            // 計算累加時間 (從 0 開始，以秒為單位)
+            const startTime = noiseData.length > 0 ? noiseData[0].time.getTime() : 0;
+            const labels = noiseData.map(d => {
+                const elapsedSec = (d.time.getTime() - startTime) / 1000;
+                return elapsedSec.toFixed(1);
+            });
             const values = noiseData.map(d => d.noise_db);
             
             noiseChart = new Chart(ctx, {
@@ -308,7 +377,7 @@
                         backgroundColor: 'rgba(249, 115, 22, 0.1)',
                         borderWidth: 1.5,
                         pointRadius: 0,
-                        fill: true,
+                        fill: false,
                         tension: 0.1
                     }]
                 },
@@ -317,15 +386,21 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: { display: true },
-                        tooltip: { mode: 'index', intersect: false }
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                title: (items) => `經過時間: ${items[0].label} 秒`
+                            }
+                        }
                     },
                     scales: {
                         x: {
                             display: true,
-                            title: { display: true, text: '時間 (UTC+8)' },
+                            title: { display: true, text: '經過時間 (秒)' },
                             ticks: {
                                 maxTicksLimit: 10,
-                                maxRotation: 45
+                                maxRotation: 0
                             }
                         },
                         y: {
@@ -345,26 +420,52 @@
             
             const points = gpsData.map(d => ({ x: d.lon, y: d.lat }));
             
+            // 根據時間順序產生漸層顏色 (淺藍 → 紫色)
+            // 淺藍 (135, 206, 235) → 中紫 (147, 112, 219) → 深紫 (128, 0, 128)
+            const colors = gpsData.map((d, i) => {
+                const ratio = gpsData.length > 1 ? i / (gpsData.length - 1) : 0;
+                let r, g, b;
+                if (ratio < 0.5) {
+                    // 淺藍 → 中紫 (0 ~ 0.5)
+                    const t = ratio * 2;
+                    r = Math.round(135 * (1 - t) + 147 * t);
+                    g = Math.round(206 * (1 - t) + 112 * t);
+                    b = Math.round(235 * (1 - t) + 219 * t);
+                } else {
+                    // 中紫 → 深紫 (0.5 ~ 1)
+                    const t = (ratio - 0.5) * 2;
+                    r = Math.round(147 * (1 - t) + 128 * t);
+                    g = Math.round(112 * (1 - t) + 0 * t);
+                    b = Math.round(219 * (1 - t) + 128 * t);
+                }
+                return `rgba(${r}, ${g}, ${b}, 0.85)`;
+            });
+            
             gpsChart = new Chart(ctx, {
                 type: 'scatter',
                 data: {
                     datasets: [{
                         label: 'GPS 軌跡',
                         data: points,
-                        backgroundColor: 'rgba(59, 130, 246, 0.6)',
-                        borderColor: 'rgb(59, 130, 246)',
-                        pointRadius: 4,
-                        pointHoverRadius: 6
+                        backgroundColor: colors,
+                        borderColor: colors,
+                        pointRadius: 5,
+                        pointHoverRadius: 8
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: true },
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: (ctx) => `Lat: ${ctx.parsed.y.toFixed(6)}, Lon: ${ctx.parsed.x.toFixed(6)}`
+                                label: (ctx) => {
+                                    const idx = ctx.dataIndex;
+                                    const startTime = gpsData.length > 0 ? gpsData[0].time.getTime() : 0;
+                                    const elapsedSec = (gpsData[idx].time.getTime() - startTime) / 1000;
+                                    return `t=${elapsedSec.toFixed(1)}s - Lat: ${ctx.parsed.y.toFixed(6)}, Lon: ${ctx.parsed.x.toFixed(6)}`;
+                                }
                             }
                         }
                     },
@@ -382,70 +483,70 @@
             });
         }
 
-        // 繪製合併圖
+        // 繪製合併圖 (對齊成功點，漸層顏色)
         function drawCombinedChart() {
             const ctx = document.getElementById('combined-chart').getContext('2d');
             
             if (combinedChart) combinedChart.destroy();
             
-            // 為 noise 資料產生虛擬座標 (使用相同 timeKey 對應的 GPS 座標，若無則跳過)
-            // 這裡我們用一個不同的方式：noise 點使用對齊到的 GPS 座標
-            const gpsPoints = gpsData.map(d => ({ x: d.lon, y: d.lat }));
-            
-            // Noise 點：找最近的 GPS 座標
-            const gpsTimeMap = new Map();
-            gpsData.forEach(g => {
-                gpsTimeMap.set(g.timeKey, g);
-            });
-            
-            const noisePoints = [];
-            noiseData.forEach(n => {
-                if (gpsTimeMap.has(n.timeKey)) {
-                    const g = gpsTimeMap.get(n.timeKey);
-                    noisePoints.push({ x: g.lon, y: g.lat });
-                }
-            });
-            
             const matchedPoints = matchedData.map(d => ({ x: d.lon, y: d.lat }));
+            
+            // 根據 noise dB 強度產生漸層顏色
+            // dB 越高 (越接近 0) = 越強 = 橘紅色
+            // dB 越低 (越負) = 越弱 = 淺色
+            const noiseValues = matchedData.map(d => d.noise_db);
+            const minNoise = Math.min(...noiseValues);
+            const maxNoise = Math.max(...noiseValues);
+            const noiseRange = maxNoise - minNoise || 1; // 避免除以 0
+            
+            const colors = matchedData.map((d) => {
+                // 正規化到 0~1 (0=最弱, 1=最強)
+                const ratio = (d.noise_db - minNoise) / noiseRange;
+                
+                // 淺粉紅 (255, 228, 225) → 番茄紅 (255, 99, 71) → 紅色 (220, 20, 60)
+                let r, g, b;
+                if (ratio < 0.5) {
+                    // 淺粉紅 → 番茄紅 (0 ~ 0.5)
+                    const t = ratio * 2;
+                    r = 255;
+                    g = Math.round(228 * (1 - t) + 99 * t);
+                    b = Math.round(225 * (1 - t) + 71 * t);
+                } else {
+                    // 番茄紅 → 深紅 (0.5 ~ 1)
+                    const t = (ratio - 0.5) * 2;
+                    r = Math.round(255 * (1 - t) + 220 * t);
+                    g = Math.round(99 * (1 - t) + 20 * t);
+                    b = Math.round(71 * (1 - t) + 60 * t);
+                }
+                return `rgba(${r}, ${g}, ${b}, 0.85)`;
+            });
             
             combinedChart = new Chart(ctx, {
                 type: 'scatter',
                 data: {
-                    datasets: [
-                        {
-                            label: 'GPS 全部點',
-                            data: gpsPoints,
-                            backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                            borderColor: 'rgb(59, 130, 246)',
-                            pointRadius: 4,
-                            hidden: !els.toggleGps.checked
-                        },
-                        {
-                            label: 'Noise 對應點',
-                            data: noisePoints,
-                            backgroundColor: 'rgba(249, 115, 22, 0.5)',
-                            borderColor: 'rgb(249, 115, 22)',
-                            pointRadius: 4,
-                            hidden: !els.toggleNoise.checked
-                        },
-                        {
-                            label: '對齊成功點',
-                            data: matchedPoints,
-                            backgroundColor: 'rgba(34, 197, 94, 0.7)',
-                            borderColor: 'rgb(34, 197, 94)',
-                            pointRadius: 6,
-                            hidden: !els.toggleMatched.checked
-                        }
-                    ]
+                    datasets: [{
+                        label: '對齊成功點',
+                        data: matchedPoints,
+                        backgroundColor: colors,
+                        borderColor: colors,
+                        pointRadius: 5,
+                        pointHoverRadius: 8
+                    }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: true },
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: (ctx) => `${ctx.dataset.label}: Lat ${ctx.parsed.y.toFixed(6)}, Lon ${ctx.parsed.x.toFixed(6)}`
+                                label: (ctx) => {
+                                    const idx = ctx.dataIndex;
+                                    const startTime = matchedData.length > 0 ? matchedData[0].time.getTime() : 0;
+                                    const elapsedSec = (matchedData[idx].time.getTime() - startTime) / 1000;
+                                    const noiseDb = matchedData[idx].noise_db.toFixed(2);
+                                    return `t=${elapsedSec.toFixed(1)}s | Noise: ${noiseDb}dB | Lat: ${ctx.parsed.y.toFixed(6)}, Lon: ${ctx.parsed.x.toFixed(6)}`;
+                                }
                             }
                         }
                     },
@@ -461,15 +562,6 @@
                     }
                 }
             });
-        }
-
-        // 更新合併圖的顯示/隱藏
-        function updateCombinedChartVisibility() {
-            if (!combinedChart) return;
-            combinedChart.data.datasets[0].hidden = !els.toggleGps.checked;
-            combinedChart.data.datasets[1].hidden = !els.toggleNoise.checked;
-            combinedChart.data.datasets[2].hidden = !els.toggleMatched.checked;
-            combinedChart.update();
         }
 
         // 更新統計資訊
@@ -510,6 +602,14 @@
         // ========== 主要處理邏輯 ==========
 
         function processFiles() {
+            // 取得選擇的時區
+            const gpsTimezone = parseInt(els.gpsTimezone.value);
+            const noiseTimezone = parseInt(els.noiseTimezone.value);
+            
+            // 根據時區解析資料
+            gpsData = parseGpsData(gpsRawData, gpsTimezone);
+            noiseData = parseNoiseData(noiseRawData, noiseTimezone);
+            
             // 顯示所有區塊
             els.statsSection.classList.remove('hidden');
             els.chart1Section.classList.remove('hidden');
@@ -529,14 +629,20 @@
         }
 
         function clearAll() {
+            gpsRawData = null;
+            noiseRawData = null;
             gpsData = [];
             noiseData = [];
             matchedData = [];
             
             els.gpsFile.value = '';
             els.noiseFile.value = '';
+            els.gpsTimezone.value = '0';
+            els.noiseTimezone.value = '8';
             els.gpsStatus.textContent = '尚未選擇檔案';
+            els.gpsStatus.className = 'text-xs text-gray-400';
             els.noiseStatus.textContent = '尚未選擇檔案';
+            els.noiseStatus.className = 'text-xs text-gray-400';
             els.btnProcess.disabled = true;
             
             els.statsSection.classList.add('hidden');
@@ -551,7 +657,7 @@
         }
 
         function checkFilesReady() {
-            els.btnProcess.disabled = !(gpsData.length > 0 && noiseData.length > 0);
+            els.btnProcess.disabled = !(gpsRawData && noiseRawData);
         }
 
         // ========== 事件綁定 ==========
@@ -562,14 +668,13 @@
             
             try {
                 const text = await file.text();
-                const raw = parseCSV(text);
-                gpsData = parseGpsData(raw);
-                els.gpsStatus.textContent = `✓ 已載入 ${gpsData.length} 筆 GPS 資料`;
+                gpsRawData = parseCSV(text);
+                els.gpsStatus.textContent = `✓ 已載入 ${gpsRawData.length} 筆 GPS 資料 (待分析)`;
                 els.gpsStatus.className = 'text-xs text-green-600';
             } catch (err) {
                 els.gpsStatus.textContent = '✗ 檔案解析失敗';
                 els.gpsStatus.className = 'text-xs text-red-600';
-                gpsData = [];
+                gpsRawData = null;
             }
             checkFilesReady();
         });
@@ -580,25 +685,19 @@
             
             try {
                 const text = await file.text();
-                const raw = parseCSV(text);
-                noiseData = parseNoiseData(raw);
-                els.noiseStatus.textContent = `✓ 已載入 ${noiseData.length} 筆 Noise 資料`;
+                noiseRawData = parseCSV(text);
+                els.noiseStatus.textContent = `✓ 已載入 ${noiseRawData.length} 筆 Noise 資料 (待分析)`;
                 els.noiseStatus.className = 'text-xs text-green-600';
             } catch (err) {
                 els.noiseStatus.textContent = '✗ 檔案解析失敗';
                 els.noiseStatus.className = 'text-xs text-red-600';
-                noiseData = [];
+                noiseRawData = null;
             }
             checkFilesReady();
         });
 
         els.btnProcess.addEventListener('click', processFiles);
         els.btnClear.addEventListener('click', clearAll);
-
-        // 合併圖切換事件
-        els.toggleGps.addEventListener('change', updateCombinedChartVisibility);
-        els.toggleNoise.addEventListener('change', updateCombinedChartVisibility);
-        els.toggleMatched.addEventListener('change', updateCombinedChartVisibility);
 
     </script>
 </body>
