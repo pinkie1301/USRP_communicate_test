@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS & Noise Log 視覺化工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white p-4 shadow-md">
+        <h1 class="text-xl font-bold text-center">GPS & Noise Log 視覺化工具</h1>
+        <p class="text-center text-indigo-200 text-sm mt-1">上傳 CSV 檔案，視覺化時間軸數據</p>
+    </header>
+
+    <main class="max-w-6xl mx-auto p-4 space-y-6">
+        <!-- File Upload Section -->
+        <div class="bg-white rounded-xl shadow p-6">
+            <h2 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2">📁 檔案上傳</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- GPS File -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-semibold text-gray-600">
+                        GPS Log (CSV) - 時區 UTC+0
+                    </label>
+                    <input type="file" id="gps-file" accept=".csv" 
+                        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                    <p id="gps-status" class="text-xs text-gray-400">尚未選擇檔案</p>
+                </div>
+                <!-- Noise File -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-semibold text-gray-600">
+                        Noise Log (CSV) - 時區 UTC+8
+                    </label>
+                    <input type="file" id="noise-file" accept=".csv" 
+                        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer">
+                    <p id="noise-status" class="text-xs text-gray-400">尚未選擇檔案</p>
+                </div>
+            </div>
+            <div class="mt-4 flex gap-3">
+                <button id="btn-process" disabled 
+                    class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-2 px-6 rounded-lg shadow transition">
+                    開始分析
+                </button>
+                <button id="btn-clear" 
+                    class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg shadow transition">
+                    清除全部
+                </button>
+            </div>
+        </div>
+
+        <!-- Statistics Section -->
+        <div id="stats-section" class="hidden bg-white rounded-xl shadow p-6">
+            <h2 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2">📊 數據統計</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div class="bg-blue-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-blue-600" id="stat-gps-count">0</div>
+                    <div class="text-xs text-gray-500">GPS 紀錄點</div>
+                </div>
+                <div class="bg-orange-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-orange-600" id="stat-noise-count">0</div>
+                    <div class="text-xs text-gray-500">Noise 紀錄點</div>
+                </div>
+                <div class="bg-green-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-green-600" id="stat-matched-count">0</div>
+                    <div class="text-xs text-gray-500">對齊成功點</div>
+                </div>
+                <div class="bg-purple-50 rounded-lg p-3">
+                    <div class="text-2xl font-bold text-purple-600" id="stat-match-rate">0%</div>
+                    <div class="text-xs text-gray-500">對齊率</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 1: Noise Chart -->
+        <div id="chart1-section" class="hidden bg-white rounded-xl shadow p-6">
+            <h2 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2">📈 Noise 訊號圖 (折線圖)</h2>
+            <div class="chart-container">
+                <canvas id="noise-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart 2: GPS Chart -->
+        <div id="chart2-section" class="hidden bg-white rounded-xl shadow p-6">
+            <h2 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2">🗺️ GPS 軌跡圖 (二維點圖)</h2>
+            <div class="chart-container">
+                <canvas id="gps-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart 3: Combined Chart -->
+        <div id="chart3-section" class="hidden bg-white rounded-xl shadow p-6">
+            <h2 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2">🔗 Noise 與 GPS 疊圖</h2>
+            <!-- Toggle Controls -->
+            <div class="flex flex-wrap gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="toggle-gps" checked class="w-4 h-4 text-blue-600 rounded">
+                    <span class="text-sm font-medium text-blue-600">🔵 GPS 全部點</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="toggle-noise" checked class="w-4 h-4 text-orange-600 rounded">
+                    <span class="text-sm font-medium text-orange-600">🟠 Noise 全部點</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="toggle-matched" checked class="w-4 h-4 text-green-600 rounded">
+                    <span class="text-sm font-medium text-green-600">🟢 對齊成功點</span>
+                </label>
+            </div>
+            <div class="chart-container">
+                <canvas id="combined-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Data Preview Section -->
+        <div id="preview-section" class="hidden bg-white rounded-xl shadow p-6">
+            <h2 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2">📋 對齊數據預覽 (前 50 筆)</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left border-collapse">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="p-2 border">#</th>
+                            <th class="p-2 border">時間 (UTC+8)</th>
+                            <th class="p-2 border">Lat</th>
+                            <th class="p-2 border">Lon</th>
+                            <th class="p-2 border">Noise (dB)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="preview-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <footer class="text-center text-gray-400 text-xs py-4">
+        GPS & Noise Log Visualizer v1.0
+    </footer>
+
+    <script>
+        // ========== 全域變數 ==========
+        let gpsData = [];
+        let noiseData = [];
+        let matchedData = [];
+        
+        let noiseChart = null;
+        let gpsChart = null;
+        let combinedChart = null;
+
+        // ========== DOM 元素 ==========
+        const els = {
+            gpsFile: document.getElementById('gps-file'),
+            noiseFile: document.getElementById('noise-file'),
+            gpsStatus: document.getElementById('gps-status'),
+            noiseStatus: document.getElementById('noise-status'),
+            btnProcess: document.getElementById('btn-process'),
+            btnClear: document.getElementById('btn-clear'),
+            statsSection: document.getElementById('stats-section'),
+            chart1Section: document.getElementById('chart1-section'),
+            chart2Section: document.getElementById('chart2-section'),
+            chart3Section: document.getElementById('chart3-section'),
+            previewSection: document.getElementById('preview-section'),
+            toggleGps: document.getElementById('toggle-gps'),
+            toggleNoise: document.getElementById('toggle-noise'),
+            toggleMatched: document.getElementById('toggle-matched'),
+        };
+
+        // ========== 工具函式 ==========
+
+        // 解析 CSV 文字
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            const data = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                if (values.length >= headers.length) {
+                    const row = {};
+                    headers.forEach((h, idx) => {
+                        row[h] = values[idx]?.trim();
+                    });
+                    data.push(row);
+                }
+            }
+            return data;
+        }
+
+        // 將時間字串轉為 Date 物件 (已轉換為 UTC+8)
+        function parseTimeToUTC8(timeStr, isUTC0 = false) {
+            // 移除微秒部分 (只保留毫秒)
+            let normalizedStr = timeStr;
+            const dotIndex = timeStr.lastIndexOf('.');
+            if (dotIndex !== -1) {
+                const fractional = timeStr.substring(dotIndex + 1);
+                if (fractional.length > 3) {
+                    normalizedStr = timeStr.substring(0, dotIndex + 4); // 只保留3位毫秒
+                }
+            }
+            
+            let date = new Date(normalizedStr);
+            
+            // 如果是 UTC+0，加上 8 小時轉為 UTC+8
+            if (isUTC0) {
+                date = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+            }
+            
+            return date;
+        }
+
+        // 將 Date 轉為顯示字串
+        function formatTime(date) {
+            const pad = (n, len = 2) => String(n).padStart(len, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ` +
+                   `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${pad(date.getMilliseconds(), 3)}`;
+        }
+
+        // 取得四捨五入到 0.5 秒的時間戳 (用於對齊)
+        function getRoundedHalfSecondKey(date) {
+            const ms = date.getTime();
+            const rounded = Math.round(ms / 500) * 500; // 四捨五入到 0.5 秒
+            return rounded;
+        }
+
+        // 解析 GPS 資料
+        function parseGpsData(rawData) {
+            return rawData.map(row => {
+                const time = parseTimeToUTC8(row.time_stamp, true); // GPS 是 UTC+0，需轉換
+                return {
+                    time: time,
+                    timeKey: getRoundedHalfSecondKey(time),
+                    lat: parseFloat(row.lat),
+                    lon: parseFloat(row.lon),
+                    alt: parseFloat(row.alt)
+                };
+            }).filter(d => !isNaN(d.lat) && !isNaN(d.lon));
+        }
+
+        // 解析 Noise 資料
+        function parseNoiseData(rawData) {
+            return rawData.map(row => {
+                const time = parseTimeToUTC8(row.time_stamp, false); // Noise 已是 UTC+8
+                return {
+                    time: time,
+                    timeKey: getRoundedHalfSecondKey(time),
+                    noise_db: parseFloat(row.noise_floor_db)
+                };
+            }).filter(d => !isNaN(d.noise_db));
+        }
+
+        // 對齊 GPS 和 Noise 資料
+        function matchData(gps, noise) {
+            const matched = [];
+            
+            // 建立 noise 的 timeKey 索引
+            const noiseMap = new Map();
+            noise.forEach(n => {
+                const key = n.timeKey;
+                if (!noiseMap.has(key)) {
+                    noiseMap.set(key, n);
+                }
+            });
+            
+            // 對每個 GPS 點找對應的 noise
+            gps.forEach(g => {
+                const key = g.timeKey;
+                if (noiseMap.has(key)) {
+                    matched.push({
+                        time: g.time,
+                        lat: g.lat,
+                        lon: g.lon,
+                        noise_db: noiseMap.get(key).noise_db
+                    });
+                }
+            });
+            
+            return matched;
+        }
+
+        // ========== 圖表繪製 ==========
+
+        // 繪製 Noise 折線圖
+        function drawNoiseChart() {
+            const ctx = document.getElementById('noise-chart').getContext('2d');
+            
+            if (noiseChart) noiseChart.destroy();
+            
+            const labels = noiseData.map(d => formatTime(d.time));
+            const values = noiseData.map(d => d.noise_db);
+            
+            noiseChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Noise Floor (dB)',
+                        data: values,
+                        borderColor: 'rgb(249, 115, 22)',
+                        backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: { display: true, text: '時間 (UTC+8)' },
+                            ticks: {
+                                maxTicksLimit: 10,
+                                maxRotation: 45
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: { display: true, text: 'dB' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 繪製 GPS 散點圖
+        function drawGpsChart() {
+            const ctx = document.getElementById('gps-chart').getContext('2d');
+            
+            if (gpsChart) gpsChart.destroy();
+            
+            const points = gpsData.map(d => ({ x: d.lon, y: d.lat }));
+            
+            gpsChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'GPS 軌跡',
+                        data: points,
+                        backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `Lat: ${ctx.parsed.y.toFixed(6)}, Lon: ${ctx.parsed.x.toFixed(6)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: { display: true, text: '經度 (Longitude)' }
+                        },
+                        y: {
+                            display: true,
+                            title: { display: true, text: '緯度 (Latitude)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 繪製合併圖
+        function drawCombinedChart() {
+            const ctx = document.getElementById('combined-chart').getContext('2d');
+            
+            if (combinedChart) combinedChart.destroy();
+            
+            // 為 noise 資料產生虛擬座標 (使用相同 timeKey 對應的 GPS 座標，若無則跳過)
+            // 這裡我們用一個不同的方式：noise 點使用對齊到的 GPS 座標
+            const gpsPoints = gpsData.map(d => ({ x: d.lon, y: d.lat }));
+            
+            // Noise 點：找最近的 GPS 座標
+            const gpsTimeMap = new Map();
+            gpsData.forEach(g => {
+                gpsTimeMap.set(g.timeKey, g);
+            });
+            
+            const noisePoints = [];
+            noiseData.forEach(n => {
+                if (gpsTimeMap.has(n.timeKey)) {
+                    const g = gpsTimeMap.get(n.timeKey);
+                    noisePoints.push({ x: g.lon, y: g.lat });
+                }
+            });
+            
+            const matchedPoints = matchedData.map(d => ({ x: d.lon, y: d.lat }));
+            
+            combinedChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'GPS 全部點',
+                            data: gpsPoints,
+                            backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                            borderColor: 'rgb(59, 130, 246)',
+                            pointRadius: 4,
+                            hidden: !els.toggleGps.checked
+                        },
+                        {
+                            label: 'Noise 對應點',
+                            data: noisePoints,
+                            backgroundColor: 'rgba(249, 115, 22, 0.5)',
+                            borderColor: 'rgb(249, 115, 22)',
+                            pointRadius: 4,
+                            hidden: !els.toggleNoise.checked
+                        },
+                        {
+                            label: '對齊成功點',
+                            data: matchedPoints,
+                            backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                            borderColor: 'rgb(34, 197, 94)',
+                            pointRadius: 6,
+                            hidden: !els.toggleMatched.checked
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `${ctx.dataset.label}: Lat ${ctx.parsed.y.toFixed(6)}, Lon ${ctx.parsed.x.toFixed(6)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: { display: true, text: '經度 (Longitude)' }
+                        },
+                        y: {
+                            display: true,
+                            title: { display: true, text: '緯度 (Latitude)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 更新合併圖的顯示/隱藏
+        function updateCombinedChartVisibility() {
+            if (!combinedChart) return;
+            combinedChart.data.datasets[0].hidden = !els.toggleGps.checked;
+            combinedChart.data.datasets[1].hidden = !els.toggleNoise.checked;
+            combinedChart.data.datasets[2].hidden = !els.toggleMatched.checked;
+            combinedChart.update();
+        }
+
+        // 更新統計資訊
+        function updateStats() {
+            document.getElementById('stat-gps-count').textContent = gpsData.length;
+            document.getElementById('stat-noise-count').textContent = noiseData.length;
+            document.getElementById('stat-matched-count').textContent = matchedData.length;
+            
+            const rate = gpsData.length > 0 ? 
+                ((matchedData.length / gpsData.length) * 100).toFixed(1) : 0;
+            document.getElementById('stat-match-rate').textContent = rate + '%';
+        }
+
+        // 更新預覽表格
+        function updatePreview() {
+            const tbody = document.getElementById('preview-body');
+            tbody.innerHTML = '';
+            
+            const previewData = matchedData.slice(0, 50);
+            previewData.forEach((d, i) => {
+                const tr = document.createElement('tr');
+                tr.className = i % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                tr.innerHTML = `
+                    <td class="p-2 border">${i + 1}</td>
+                    <td class="p-2 border font-mono text-xs">${formatTime(d.time)}</td>
+                    <td class="p-2 border font-mono">${d.lat.toFixed(7)}</td>
+                    <td class="p-2 border font-mono">${d.lon.toFixed(7)}</td>
+                    <td class="p-2 border font-mono">${d.noise_db.toFixed(2)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            if (previewData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-400">無對齊數據</td></tr>';
+            }
+        }
+
+        // ========== 主要處理邏輯 ==========
+
+        function processFiles() {
+            // 顯示所有區塊
+            els.statsSection.classList.remove('hidden');
+            els.chart1Section.classList.remove('hidden');
+            els.chart2Section.classList.remove('hidden');
+            els.chart3Section.classList.remove('hidden');
+            els.previewSection.classList.remove('hidden');
+            
+            // 對齊資料
+            matchedData = matchData(gpsData, noiseData);
+            
+            // 更新 UI
+            updateStats();
+            drawNoiseChart();
+            drawGpsChart();
+            drawCombinedChart();
+            updatePreview();
+        }
+
+        function clearAll() {
+            gpsData = [];
+            noiseData = [];
+            matchedData = [];
+            
+            els.gpsFile.value = '';
+            els.noiseFile.value = '';
+            els.gpsStatus.textContent = '尚未選擇檔案';
+            els.noiseStatus.textContent = '尚未選擇檔案';
+            els.btnProcess.disabled = true;
+            
+            els.statsSection.classList.add('hidden');
+            els.chart1Section.classList.add('hidden');
+            els.chart2Section.classList.add('hidden');
+            els.chart3Section.classList.add('hidden');
+            els.previewSection.classList.add('hidden');
+            
+            if (noiseChart) { noiseChart.destroy(); noiseChart = null; }
+            if (gpsChart) { gpsChart.destroy(); gpsChart = null; }
+            if (combinedChart) { combinedChart.destroy(); combinedChart = null; }
+        }
+
+        function checkFilesReady() {
+            els.btnProcess.disabled = !(gpsData.length > 0 && noiseData.length > 0);
+        }
+
+        // ========== 事件綁定 ==========
+
+        els.gpsFile.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            try {
+                const text = await file.text();
+                const raw = parseCSV(text);
+                gpsData = parseGpsData(raw);
+                els.gpsStatus.textContent = `✓ 已載入 ${gpsData.length} 筆 GPS 資料`;
+                els.gpsStatus.className = 'text-xs text-green-600';
+            } catch (err) {
+                els.gpsStatus.textContent = '✗ 檔案解析失敗';
+                els.gpsStatus.className = 'text-xs text-red-600';
+                gpsData = [];
+            }
+            checkFilesReady();
+        });
+
+        els.noiseFile.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            try {
+                const text = await file.text();
+                const raw = parseCSV(text);
+                noiseData = parseNoiseData(raw);
+                els.noiseStatus.textContent = `✓ 已載入 ${noiseData.length} 筆 Noise 資料`;
+                els.noiseStatus.className = 'text-xs text-green-600';
+            } catch (err) {
+                els.noiseStatus.textContent = '✗ 檔案解析失敗';
+                els.noiseStatus.className = 'text-xs text-red-600';
+                noiseData = [];
+            }
+            checkFilesReady();
+        });
+
+        els.btnProcess.addEventListener('click', processFiles);
+        els.btnClear.addEventListener('click', clearAll);
+
+        // 合併圖切換事件
+        els.toggleGps.addEventListener('change', updateCombinedChartVisibility);
+        els.toggleNoise.addEventListener('change', updateCombinedChartVisibility);
+        els.toggleMatched.addEventListener('change', updateCombinedChartVisibility);
+
+    </script>
+</body>
+</html>
